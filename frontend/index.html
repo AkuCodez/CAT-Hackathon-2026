@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cab Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6E9EC;--surface:#F8F9FA;--surface2:#DCE1E5;--ink:#15191D;--muted:#56606A;--line:#C3CAD1;
+  --hv:#F2B705;--hvInk:#1A1400;--red:#CC2F35;--redBg:rgba(204,47,53,.14);--amber:#B86E00;--amberBg:rgba(224,138,0,.16);
+  --green:#1B8A4B;--greenBg:rgba(27,138,75,.14);--blue:#2F6FB5;
+  --sans:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14171A;--surface:#1D2125;--surface2:#282D32;--ink:#EDF0F2;--muted:#98A2AC;--line:#343A40;
+  --red:#FF5C61;--redBg:rgba(255,92,97,.16);--amber:#FFB224;--amberBg:rgba(255,178,36,.15);--green:#3DCB80;--greenBg:rgba(61,203,128,.14);--blue:#6AA5E8;
+}}
+:root[data-theme="dark"]{
+  --bg:#14171A;--surface:#1D2125;--surface2:#282D32;--ink:#EDF0F2;--muted:#98A2AC;--line:#343A40;
+  --red:#FF5C61;--redBg:rgba(255,92,97,.16);--amber:#FFB224;--amberBg:rgba(255,178,36,.15);--green:#3DCB80;--greenBg:rgba(61,203,128,.14);--blue:#6AA5E8;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+img,svg{max-width:100%}
+
+.app{display:grid;grid-template-columns:104px minmax(0,1fr);grid-template-rows:auto 1fr auto;height:100%}
+header.strip{grid-column:1/-1;background:var(--hv);color:var(--hvInk);display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:10px 16px}
+.brand{font-family:var(--cond);font-weight:700;font-size:24px;line-height:1;margin-right:6px}
+.brand small{display:block;font-family:var(--sans);font-weight:500;font-size:13px;opacity:.8}
+.clock{font-family:var(--cond);font-weight:700;font-size:32px;line-height:1}
+.pill{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.08);border-radius:8px;padding:6px 10px;font-weight:600;font-size:15px;min-height:40px}
+.pill .dot{width:12px;height:12px;border-radius:50%;background:#1B6B3A;flex:none}
+.pill.bad{background:#1A1400;color:var(--hv)}
+.pill.bad .dot{background:#FF5C61}
+.pill.warn .dot{background:#B86E00}
+.pill label{font-weight:500;font-size:13px;opacity:.85}
+.pill select{background:transparent;border:0;font-weight:700;padding:2px}
+.scores{display:flex;gap:14px;margin-left:auto;align-items:center}
+.score{text-align:right;line-height:1}
+.score b{font-family:var(--cond);font-size:30px;display:block}
+.score span{font-size:12px;font-weight:600;opacity:.8}
+.btn-strip{background:#1A1400;color:var(--hv);border:0;border-radius:8px;padding:10px 14px;font-weight:700;min-height:44px}
+
+nav.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:10px 8px;gap:6px;overflow:auto}
+nav.rail button{background:transparent;border:0;border-radius:10px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;font-size:13px;color:var(--muted);position:relative;min-height:64px}
+nav.rail button svg{width:26px;height:26px}
+nav.rail button[aria-current="page"]{background:var(--surface2);color:var(--ink)}
+nav.rail button[aria-current="page"]::before{content:"";position:absolute;left:-8px;top:12px;bottom:12px;width:4px;border-radius:2px;background:var(--hv)}
+.badge{position:absolute;top:6px;right:14px;background:var(--red);color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;font-weight:700}
+
+main{overflow:auto;overflow-x:hidden;padding:20px;min-width:0}
+section.view{display:none;max-width:1180px}
+section.view.on{display:block}
+h1{font-family:var(--cond);font-weight:700;font-size:34px;line-height:1.1;margin:0 0 4px}
+h2{font-size:19px;font-weight:700;margin:0 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:70ch}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+
+/* tasks */
+.task{display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:0}
+.task .when{font-family:var(--cond);font-weight:700;font-size:22px;line-height:1}
+.task .when small{display:block;font-family:var(--sans);font-weight:500;font-size:12px;color:var(--muted)}
+.task h3{margin:0;font-size:17px}
+.task .meta{font-size:14px;color:var(--muted)}
+.task.active{background:var(--surface2);margin:0 -16px;padding:12px 16px;border-left:4px solid var(--hv)}
+.task.done h3{text-decoration:line-through;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:2px 7px;background:var(--surface2);color:var(--muted)}
+.tag.ok{background:var(--greenBg);color:var(--green)}
+.tag.over{background:var(--amberBg);color:var(--amber)}
+.b{border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:10px 14px;font-weight:700;min-height:44px}
+.b.primary{background:var(--hv);color:var(--hvInk);border-color:transparent}
+.b.danger{background:var(--red);color:#fff;border-color:transparent}
+.b:disabled{opacity:.45;cursor:not-allowed}
+.big{font-family:var(--cond);font-weight:700;font-size:56px;line-height:1}
+.range{font-size:15px;color:var(--muted)}
+.why{list-style:none;margin:12px 0 0;padding:0}
+.why li{display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--line);font-size:15px}
+.why li b{font-variant-numeric:tabular-nums}
+.check{display:flex;gap:10px;align-items:center;padding:8px 0;font-size:15px}
+.check input{width:22px;height:22px;accent-color:var(--hv)}
+
+/* safety */
+.radarwrap{display:flex;justify-content:center}
+.radar{width:100%;max-width:340px;height:auto}
+.zone-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-top:8px}
+.zone-legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.alert{border-left:5px solid var(--line);background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.alert.critical{border-color:var(--red);background:var(--redBg)}
+.alert.warning{border-color:var(--amber);background:var(--amberBg)}
+.alert.info{border-color:var(--blue)}
+.alert h4{margin:0;font-size:16px}
+.alert p{margin:2px 0 0;font-size:14px}
+.alert .t{font-size:12px;color:var(--muted);font-weight:600}
+.empty{color:var(--muted);font-size:15px;padding:10px 0}
+
+/* behaviour */
+.metric b{font-family:var(--cond);font-size:40px;line-height:1;display:block}
+.metric span{font-size:14px;color:var(--muted)}
+.metric.flag b{color:var(--amber)}
+.chart{width:100%;height:180px}
+
+/* training */
+.mod{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.mod:last-child{border-bottom:0}
+.mod h3{margin:0;font-size:17px}
+.reason{font-size:14px;color:var(--amber);font-weight:600}
+.slot{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+
+/* incidents */
+.inc{padding:12px 0;border-bottom:1px solid var(--line)}
+.inc:last-child{border-bottom:0}
+.hash{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.chain-ok{color:var(--green);font-weight:700}
+.chain-bad{color:var(--red);font-weight:700}
+form.row,.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600}
+.field select,.field input,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px;font-weight:500}
+
+/* data */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-weight:700;color:var(--muted)}
+td.flag{color:var(--amber);font-weight:700}
+
+/* voice + banner + drawer */
+footer.voice{grid-column:1/-1;background:var(--surface);border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;padding:10px 16px}
+.mic{width:52px;height:52px;border-radius:50%;border:0;background:var(--hv);color:var(--hvInk);flex:none;display:grid;place-items:center}
+.mic.listening{background:var(--red);color:#fff}
+.voice input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:48px}
+.reply{font-size:14px;color:var(--muted);max-width:38ch}
+#banner{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 12px);width:min(760px,calc(100% - 24px));background:var(--red);color:#fff;border-radius:12px;padding:16px 18px;display:none;gap:14px;align-items:center;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#banner.on{display:flex;animation:pulse 1.2s ease-in-out 3}
+#banner h3{margin:0;font-size:20px}
+#banner p{margin:2px 0 0}
+#banner button{margin-left:auto;background:#fff;color:#8F1519;border:0;border-radius:9px;padding:10px 14px;font-weight:700;min-height:44px}
+@keyframes pulse{50%{transform:translateX(-50%) scale(1.015)}}
+#drawer{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 76px);width:300px;max-width:calc(100% - 24px);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;z-index:40;display:none;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#drawer.on{display:block}
+#drawer h2{font-size:16px}
+#drawer .b{width:100%;margin-bottom:8px;text-align:left}
+#drawer .b.on{background:var(--hv);color:var(--hvInk)}
+.speed{display:flex;gap:6px;margin-bottom:8px}
+.speed .b{flex:1;text-align:center;margin:0}
+#toast{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:10px;font-weight:600;max-width:360px;display:none;z-index:45}
+#toast.on{display:block}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);max-width:560px;width:calc(100% - 24px);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog ul{padding-left:20px}
+.q{margin:14px 0}
+.q label{display:flex;gap:8px;padding:6px 0;align-items:flex-start}
+
+@media (max-width:900px){.g2,.g3{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto auto}
+  .pill{flex:1 1 40%}
+  .voice label.small{display:none!important}
+  header.strip{gap:8px}
+  nav.rail{grid-row:4;flex-direction:row;border-right:0;border-top:1px solid var(--line);padding:6px;overflow-x:auto}
+  nav.rail button{flex:1;min-width:66px;padding:8px 2px;font-size:12px}
+  nav.rail button[aria-current="page"]::before{left:12px;right:12px;top:-6px;bottom:auto;width:auto;height:4px}
+  .scores{margin-left:0}
+  .brand small{display:none}
+  main{padding:14px}
+  .reply{display:none}
+}
+@media (prefers-reduced-motion:reduce){#banner.on{animation:none}}
+
+.src{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.src .dot{width:12px;height:12px;border-radius:50%;margin-top:4px;flex:none;background:var(--line)}
+.src .dot.on{background:var(--green)}
+.src b{display:block;font-size:15px}
+.src code{font-size:12px;color:var(--muted);word-break:break-all}
+#conn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 90px);background:var(--amber);color:#1A1400;padding:8px 14px;border-radius:9px;font-weight:700;display:none;z-index:60}
+#conn.on{display:block}
+.wx{font-size:11px;opacity:.8;display:block;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.offline{color:var(--muted);font-size:14px;text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="strip">
+    <div class="brand">Cab Companion<small id="whoTxt">EXC001, operator OP1001</small></div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="pill" id="pBelt"><span class="dot"></span><span><label>Seatbelt</label><br><b id="beltTxt">–</b></span></div>
+    <div class="pill" id="pEng"><span class="dot"></span><span><label>Machine</label><br><b id="engTxt">–</b></span></div>
+    <div class="pill" id="pProx"><span class="dot"></span><span><label>Nearest person</label><br><b id="proxTxt">–</b></span></div>
+    <div class="pill"><span><label for="weather">Weather</label><br>
+      <select id="weather"><option value="auto">Live</option><option>Sunny</option><option>Cloudy</option><option>Rainy</option><option>Windy</option></select>
+      <span class="wx" id="wxTxt"></span></span></div>
+    <div class="scores">
+      <div class="score"><b id="safeScore">–</b><span>Safety</span></div>
+      <div class="score"><b id="effScore">–</b><span>Efficiency</span></div>
+      <button class="btn-strip" id="drawerBtn" aria-expanded="false" aria-controls="drawer">Sources</button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Sections">
+    <button data-v="today" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Today</button>
+    <button data-v="safety"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Safety<span class="badge" id="safeBadge" hidden>0</span></button>
+    <button data-v="behaviour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Behaviour</button>
+    <button data-v="training"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10v5c3 2 9 2 12 0v-5"/></svg>Training<span class="badge" id="trainBadge" hidden>0</span></button>
+    <button data-v="incidents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>Incidents</button>
+    <button data-v="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>Data</button>
+  </nav>
+
+  <main id="main">
+    <section class="view on" id="v-today">
+      <h1>Today's shift</h1>
+      <p class="lede">Predicted by a model trained on past tasks, using today's live weather, your skill level, machine age, time of day and your recent pace.</p>
+      <div class="grid g2">
+        <div class="panel">
+          <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Scheduled tasks</h2><span class="muted small" id="finishTxt"></span></div>
+          <div id="taskList"></div>
+        </div>
+        <div class="grid" style="align-content:start">
+          <div class="panel" id="nextCard"></div>
+          <div class="panel"><h2>Pre-shift walkaround</h2><div id="walk"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="v-safety">
+      <h1>Safety</h1>
+      <p class="lede">Live checks from the machine, the rear camera and the cab motion sensor. Critical events are saved to the incident record automatically.</p>
+      <div class="grid g2">
+        <div class="panel">
+          <h2>Around the machine</h2>
+          <div class="radarwrap"><svg class="radar" id="radar" viewBox="-130 -130 260 260" role="img" aria-label="Top view of people around the machine"></svg></div>
+          <p class="offline" id="camOff"></p>
+          <div class="zone-legend"><span><i style="background:var(--red)"></i>Stop zone <b id="zRed">5 m</b></span><span><i style="background:var(--amber)"></i>Caution zone <b id="zAmb">10 m</b></span><span>Cab tilt <b id="tiltTxt">–</b></span></div>
+        </div>
+        <div class="panel">
+          <h2>Active now</h2><div id="activeList"></div>
+          <h2 style="margin-top:18px">Shift history</h2><div id="alertList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="v-behaviour">
+      <h1>Machine behaviour</h1>
+      <p class="lede">The last 30 minutes of machine data, checked by rules and by an anomaly model trained on normal work for this operator.</p>
+      <div class="grid g3" style="margin-bottom:16px">
+        <div class="panel metric" id="mIdle"><b>–</b><span>Idle share, last 30 min</span></div>
+        <div class="panel metric" id="mFuel"><b>–</b><span>Fuel per load cycle</span></div>
+        <div class="panel metric" id="mAnom"><b>–</b><span>Anomaly model</span></div>
+      </div>
+      <div class="grid g2">
+        <div class="panel">
+          <h2>Idle share over time</h2>
+          <svg class="chart" id="idleChart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="Idle share chart"></svg>
+          <p class="muted small" style="margin:6px 0 0" id="shiftTot"></p>
+        </div>
+        <div class="panel"><h2>Flagged patterns</h2><div id="behList"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-training">
+      <h1>Training hub</h1>
+      <p class="lede">Lessons are recommended from what happens on shift. Each one takes under 6 minutes.</p>
+      <div class="grid g2">
+        <div class="panel"><h2>Recommended for you</h2><div id="assigned"></div><h2 style="margin-top:18px">All lessons</h2><div id="allMods"></div></div>
+        <div class="panel"><h2>Book an instructor</h2><div id="slots"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-incidents">
+      <h1>Incident record</h1>
+      <p class="lede">Each record stores the 10 minutes of machine data before it and is chained to the previous record by a SHA-256 hash on the server, so any later edit is detectable.</p>
+      <div class="grid g2">
+        <div class="panel">
+          <div class="row" style="justify-content:space-between;margin-bottom:8px">
+            <h2 style="margin:0">Records</h2>
+            <div class="row"><button class="b" id="verifyBtn">Verify record chain</button><button class="b" id="tamperBtn">Simulate an edit</button></div>
+          </div>
+          <p id="chainTxt" class="small"></p>
+          <div id="incList"></div>
+        </div>
+        <div class="panel">
+          <h2>Log an incident</h2>
+          <form id="incForm" class="grid" style="gap:10px">
+            <label class="field">Type<select id="incType"><option>Near miss</option><option>Equipment fault</option><option>Ground hazard</option><option>Injury</option><option>Other</option></select></label>
+            <label class="field">Severity<select id="incSev"><option value="warning">Moderate</option><option value="critical">Serious</option><option value="info">Minor</option></select></label>
+            <label class="field">What happened<textarea id="incNote" rows="3" placeholder="Short description, or say it using the mic below"></textarea></label>
+            <button class="b primary" type="submit">Save record</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="v-data">
+      <h1>Data and models</h1>
+      <p class="lede">What the brief's sample data shows, and how the trained models perform.</p>
+      <div class="panel" style="margin-bottom:16px"><h2>Telemetry sample, with derived features</h2><div class="tablewrap"><table id="telTable"></table></div></div>
+      <div class="grid g2">
+        <div class="panel"><h2>Model performance</h2><div id="modelInfo" class="small"></div><div class="tablewrap" style="margin-top:10px"><table id="briefTable"></table></div></div>
+        <div class="panel">
+          <h2>Estimate a task</h2>
+          <div class="grid" style="gap:10px;grid-template-columns:1fr 1fr">
+            <label class="field">Task type<select id="eType"><option>Earth Excavation</option><option>Trenching</option><option>Material Loading</option><option>Grading</option><option>Demolition</option></select></label>
+            <label class="field">Weather<select id="eWeather"><option>Sunny</option><option>Cloudy</option><option>Rainy</option><option>Windy</option></select></label>
+            <label class="field">Operator skill<select id="eSkill"><option>Expert</option><option selected>Intermediate</option><option>Beginner</option></select></label>
+            <label class="field">Machine age (yrs)<input id="eAge" type="number" min="0" max="20" value="4"></label>
+            <label class="field">Planned time (min)<input id="ePlan" type="number" min="5" max="600" value="45"></label>
+            <label class="field">Start hour<input id="eHour" type="number" min="0" max="23" value="10"></label>
+          </div>
+          <div id="eOut" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="voice">
+    <button class="mic" id="micBtn" aria-label="Speak a command"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg></button>
+    <input id="cmd" placeholder="Say or type: next task, start task, complete task, log incident, my score, take a break">
+    <label class="small" style="display:flex;gap:6px;align-items:center;white-space:nowrap"><input type="checkbox" id="voiceOn" checked> Spoken alerts</label>
+    <div class="reply" id="reply" aria-live="polite"></div>
+  </footer>
+</div>
+
+<div id="banner" role="alert"><div><h3 id="banTitle"></h3><p id="banText"></p></div><button id="banAck">Acknowledge</button></div>
+<div id="toast" role="status"></div>
+<div id="conn">Reconnecting to backend…</div>
+
+<div id="drawer" aria-label="Data sources">
+  <h2>Data sources</h2>
+  <div id="srcList"></div>
+  <div style="margin-top:12px">
+    <button class="b" id="dBreak">Take a break</button>
+    <button class="b" id="dReset">Start a new shift</button>
+    <button class="b" id="dTheme">Switch light/dark</button>
+  </div>
+</div>
+
+<dialog id="modDlg"><div id="modBody"></div></dialog>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct=x=>Math.round((x||0)*100)+"%";
+const sgn=x=>(x>=0?"+":"")+Number(x).toFixed(1);
+
+const MODULES={
+  seatbelt:{title:"Buckle up, every start",format:"Video and quiz",mins:4,points:["The seatbelt keeps you inside the cab's protective frame if the machine tips or rolls.","Fasten it before starting the engine and keep it on while idling, not only while digging.","Operators thrown from a tipping machine are far more likely to be seriously hurt than those who stay belted in."],quiz:{q:"When should the seatbelt be fastened?",o:["Only when travelling","Before the engine starts, for the whole time you are seated","Only when working on slopes"],a:1}},
+  idle:{title:"Cutting idle time",format:"Micro-lesson",mins:3,points:["An idling machine still burns fuel and adds engine hours toward service intervals.","If a wait will be longer than about 5 minutes, shut the engine down.","Use auto-idle and automatic engine shutdown if the machine has them."],quiz:{q:"The next truck is 15 minutes away. What should you do?",o:["Keep the engine running so you are ready","Shut down and restart when the truck arrives","Rev the engine now and then to keep it warm"],a:1}},
+  crew:{title:"Working near ground crew",format:"Simulation",mins:6,points:["Know where every person on the ground is before you swing or travel.","Agree hand signals with the spotter at the start of the shift.","If you lose sight of a worker, stop until you can see them again."],quiz:{q:"A worker walks behind the counterweight. You should:",o:["Continue, they know the machine is working","Stop swinging and wait until they are clear and visible","Sound the horn and keep swinging"],a:1}},
+  weather:{title:"Operating in rain and wind",format:"Video",mins:5,points:["Wet ground loses traction and can give way near trench edges.","Reduce swing speed and carry loads low.","Keep a wider distance from edges, slopes and people."],quiz:{q:"After heavy rain, the trench edge looks soft. You should:",o:["Work closer to finish faster","Keep the machine back from the edge and report it","Ignore it if the machine feels stable"],a:1}},
+  smooth:{title:"Smooth lever control",format:"Simulation",mins:5,points:["Jerky swings and sudden stops stress the hydraulics and the undercarriage.","Feather the levers: ease in, ease out, especially with a full bucket.","Smooth operation is usually faster over a full shift, not slower."],quiz:{q:"Why avoid sudden stops at the end of a swing?",o:["They waste time only","They stress the machine and can shift the load","They are fine with an empty bucket only"],a:1}},
+  slope:{title:"Working on slopes",format:"Video and quiz",mins:5,points:["Travel straight up or down a slope, never across it.","Keep the bucket low to lower the centre of gravity.","If the machine starts to tip, lower the bucket to the ground and stay belted in."],quiz:{q:"The cab starts to tilt on a slope. First action?",o:["Jump out of the cab","Lower the bucket to the ground and stay seated and belted","Swing the boom uphill quickly"],a:1}},
+  walkaround:{title:"Pre-shift walkaround",format:"Checklist",mins:5,points:["Check for leaks, damaged hoses, track tension and cracked glass.","Test the horn, travel alarm, lights and mirrors.","Report defects before starting work, not at the end of the shift."],quiz:{q:"You find a leaking hydraulic hose during the walkaround. You should:",o:["Start work and report it later","Report it and do not operate until it is checked","Wipe it clean and continue"],a:1}}
+};
+const HIST_TEL=[["2025-05-01 08:00",1523.5,5.2,12,30,"Fastened","No"],["2025-05-01 10:00",1524.8,3.8,2,55,"Unfastened","Yes"],["2025-05-01 14:00",1526.5,6.1,10,15,"Fastened","No"],["2025-05-02 09:00",1530.2,2.0,1,60,"Unfastened","Yes"]];
+const walk=["Tracks, hoses and leaks checked","Horn and travel alarm tested","Mirrors and camera clean","Fluid levels checked","Ground crew briefed on hand signals"].map(l=>({l,ok:false}));
+
+let S=null,view="today",lastAlertId=null,bannerId=null,incCount=-1,booked=null,taskSig="",modelLoaded=false;
+
+async function api(path,method="GET",body){
+  const r=await fetch(path,{method,headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.detail||("HTTP "+r.status));
+  return j;
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("on"),3500);}
+function say(m){if(!$("#voiceOn").checked||!("speechSynthesis" in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(m);u.rate=1.05;speechSynthesis.speak(u);}catch(e){}}
+function reply(m){$("#reply").textContent=m;say(m);}
+async function act(fn,okMsg){try{const r=await fn();if(okMsg)toast(typeof okMsg==="function"?okMsg(r):okMsg);return r;}catch(e){toast(e.message);reply(e.message);return null;}}
+
+/* ---------- live connection ---------- */
+function connect(){
+  const ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/live");
+  ws.onopen=()=>$("#conn").classList.remove("on");
+  ws.onclose=()=>{$("#conn").classList.add("on");setTimeout(connect,1500);};
+  ws.onmessage=e=>{S=JSON.parse(e.data);onSnap();};
+}
+function onSnap(){
+  const ids=S.recent_alerts.map(a=>a.id);
+  if(lastAlertId===null)lastAlertId=ids.length?Math.max(...ids):0;
+  S.recent_alerts.filter(a=>a.id>lastAlertId).reverse().forEach(a=>{
+    if(a.severity==="warning"){toast(a.title);say(a.title);} else if(a.severity==="info")toast(a.title);
+    else say(a.title+". "+a.action);
+  });
+  if(ids.length)lastAlertId=Math.max(lastAlertId,...ids);
+  if(S.banner&&S.banner.id!==bannerId){bannerId=S.banner.id;$("#banTitle").textContent=S.banner.title;$("#banText").textContent=S.banner.action;$("#banner").classList.add("on");}
+  if(!S.banner){$("#banner").classList.remove("on");bannerId=null;}
+  renderHeader();renderSources();
+  if(S.incident_count!==incCount){incCount=S.incident_count;if(view==="incidents")loadIncidents();}
+  if(view==="today")renderToday();
+  if(view==="safety")renderSafety();
+  if(view==="behaviour")renderBeh();
+  if(view==="training")renderTraining();
+}
+
+/* ---------- header ---------- */
+function renderHeader(){
+  const m=S.machine,live=S.sources.telemetry;
+  $("#clock").textContent=S.clock;
+  $("#pBelt").className="pill"+(!live?"":m.belt?"":" bad");$("#beltTxt").textContent=!live?"No data":m.belt?"Fastened":"Unfastened";
+  $("#pEng").className="pill"+(!live?" warn":!m.engine_on?"":m.idle?" warn":"");$("#engTxt").textContent=!live?"Offline":!m.engine_on?"Engine off":m.idle?"Idling":"Working";
+  const d=S.nearest,z=S.zones;$("#pProx").className="pill"+(!S.sources.camera?" warn":d===null?"":d<z.red?" bad":d<z.amber?" warn":"");
+  $("#proxTxt").textContent=!S.sources.camera?"No camera":d===null?"Clear":d.toFixed(1)+" m";
+  const sel=$("#weather");if(document.activeElement!==sel)sel.value=S.weather.mode==="auto"?"auto":S.weather.value;
+  $("#wxTxt").textContent=S.weather.mode==="auto"?S.weather.value+". "+S.weather.detail:S.weather.detail;
+  $("#safeScore").textContent=S.operator.safety;$("#effScore").textContent=S.efficiency;
+  $("#whoTxt").textContent=S.machine.id+", operator "+S.operator.id;
+  const nAct=S.live_alerts.filter(a=>a.severity!=="info").length;$("#safeBadge").hidden=!nAct;$("#safeBadge").textContent=nAct;
+  const nTr=S.training.filter(t=>t.status==="assigned").length;$("#trainBadge").hidden=!nTr;$("#trainBadge").textContent=nTr;
+}
+function renderSources(){
+  const s=S.sources,host=location.host;
+  const rows=[
+    ["telemetry","Machine telemetry","python sensors/replay.py --api http://"+host],
+    ["camera","Rear camera (person detection)","python sensors/vision.py --api http://"+host],
+    ["phone","Cab motion sensor (phone)","Open https://<ngrok-url>/app/phone.html on the phone"],
+    ["weather_auto","Live weather",S.weather.detail]
+  ];
+  $("#srcList").innerHTML=rows.map(([k,l,h])=>'<div class="src"><span class="dot '+(s[k]?"on":"")+'"></span><div><b>'+l+(s[k]?"":" (not connected)")+'</b><code>'+esc(h)+'</code></div></div>').join("")+
+    '<p class="small muted">Task model: '+esc(S.model)+'</p>';
+}
+
+/* ---------- today ---------- */
+function renderToday(){
+  const act=S.tasks.find(t=>t.status==="active"),next=act||S.tasks.find(t=>t.status==="todo");
+  const sig=JSON.stringify(S.tasks.map(t=>[t.status,t.scheduled,t.prediction&&t.prediction.mid]));
+  if(sig!==taskSig){
+    taskSig=sig;const firstTodo=S.tasks.find(t=>t.status==="todo");
+    $("#taskList").innerHTML=S.tasks.map(t=>{
+      let meta,right="";
+      if(t.status==="done"){const d=t.actual_min-t.estimated_min;meta="Planned "+t.estimated_min+" min, took "+t.actual_min+" min";right='<span class="tag '+(d>0?"over":"ok")+'">'+(d>0?"+":"")+d+' min</span>';}
+      else if(t.status==="active"){meta="Predicted "+Math.round(t.predicted_min)+" min, <b class='elapsed'>"+t.elapsed_min+"</b> min so far";right='<button class="b primary" data-done="'+t.id+'">Complete</button>';}
+      else{const p=t.prediction;meta="Planned "+t.estimated_min+" min, predicted "+Math.round(p.low)+" to "+Math.round(p.high)+" min";
+        if(!act&&t===firstTodo)right='<button class="b primary" data-start="'+t.id+'">Start</button>';}
+      return '<div class="task '+t.status+'"><div class="when">'+t.scheduled+'<small>'+esc(t.id)+'</small></div><div><h3>'+esc(t.task_type)+'</h3><div class="meta">'+esc(t.zone)+'. '+meta+'</div></div><div>'+right+'</div></div>';
+    }).join("");
+    if(!next)$("#nextCard").innerHTML="<h2>All tasks done</h2><p class='muted'>Log any issues from the shift in the incident record.</p>";
+    else if(next.status==="active")$("#nextCard").innerHTML='<h2>In progress: '+esc(next.task_type)+'</h2><div class="big"><span class="elapsed">'+next.elapsed_min+'</span> min</div><div class="range">of about '+Math.round(next.predicted_min)+' min predicted</div>';
+    else{const p=next.prediction;$("#nextCard").innerHTML='<h2>Next up: '+esc(next.task_type)+'</h2><div class="big">'+Math.round(p.mid)+' min</div><div class="range">Likely '+Math.round(p.low)+' to '+Math.round(p.high)+' min, planned '+next.estimated_min+'</div><ul class="why"><li><span>Planned estimate</span><b>'+next.estimated_min+' min</b></li>'+
+      p.factors.map(f=>'<li><span>'+esc(f.label)+'</span><b>'+sgn(f.delta_min)+' min</b></li>').join("")+'</ul><p class="small muted" style="margin:8px 0 0">Effects are measured against an expert on a sunny morning with a 3-year-old machine.</p>';}
+  }
+  if(act)document.querySelectorAll(".elapsed").forEach(e=>e.textContent=act.elapsed_min);
+  $("#finishTxt").textContent="Expected finish "+S.expected_finish;
+}
+function taskAction(e){
+  const s=e.target.closest("[data-start]"),d=e.target.closest("[data-done]");
+  if(s){e.preventDefault();act(()=>api("/tasks/"+s.dataset.start+"/start","POST"),r=>"Started. Predicted "+Math.round(r.prediction.mid)+" min");}
+  if(d){e.preventDefault();act(()=>api("/tasks/"+d.dataset.done+"/complete","POST"),r=>"Completed in "+r.actual_min+" min. Pace factor ×"+r.new_bias.toFixed(2));}
+}
+$("#taskList").addEventListener("pointerdown",taskAction);
+$("#taskList").addEventListener("click",e=>{if(e.detail===0)taskAction(e);});
+function renderWalk(){$("#walk").innerHTML=walk.map((w,i)=>'<label class="check"><input type="checkbox" data-w="'+i+'" '+(w.ok?"checked":"")+'>'+esc(w.l)+'</label>').join("")+'<p class="small muted" style="margin:6px 0 0">'+walk.filter(w=>w.ok).length+' of '+walk.length+' done</p>';}
+$("#walk").addEventListener("change",e=>{const i=e.target.dataset.w;if(i!==undefined){walk[i].ok=e.target.checked;renderWalk();}});
+
+/* ---------- safety ---------- */
+const alertHTML=a=>'<div class="alert '+a.severity+'"><span class="t">'+esc(a.clock||S.clock)+', '+esc(a.category)+'</span><h4>'+esc(a.title)+'</h4><p>'+esc(a.action)+'</p></div>';
+function renderSafety(){
+  const sc=120/25,z=S.zones;let s="";
+  s+='<circle r="'+(25*sc)+'" fill="none" stroke="var(--line)" stroke-width="1.5"/><circle r="'+(z.amber*sc)+'" fill="var(--amberBg)" stroke="var(--amber)" stroke-width="1.5"/><circle r="'+(z.red*sc)+'" fill="var(--redBg)" stroke="var(--red)" stroke-width="2"/>';
+  s+='<rect x="-14" y="-18" width="28" height="36" rx="3" fill="var(--hv)" stroke="var(--hvInk)" stroke-width="1.5"/><rect x="-8" y="-12" width="12" height="12" rx="2" fill="var(--hvInk)"/><line x1="0" y1="-18" x2="0" y2="-52" stroke="var(--hvInk)" stroke-width="5" stroke-linecap="round"/><line x1="0" y1="-18" x2="0" y2="-52" stroke="var(--hv)" stroke-width="3" stroke-linecap="round"/>';
+  S.persons.forEach(p=>{const r=Math.min(p.distance_m,25)*sc,th=(p.bearing_deg-90)*Math.PI/180,x=Math.cos(th)*r,y=Math.sin(th)*r;
+    const col=p.distance_m<z.red?"var(--red)":p.distance_m<z.amber?"var(--amber)":"var(--green)";
+    s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="7" fill="'+col+'" stroke="var(--surface)" stroke-width="2"/><text x="'+(x+10).toFixed(1)+'" y="'+(y+4).toFixed(1)+'" font-size="11" font-weight="700" fill="var(--ink)">'+p.distance_m.toFixed(1)+' m</text>';});
+  $("#radar").innerHTML=s;$("#zRed").textContent=z.red+" m";$("#zAmb").textContent=z.amber+" m";
+  $("#camOff").textContent=S.sources.camera?(S.persons.length?"":"No one detected near the machine."):"Rear camera not connected.";
+  $("#tiltTxt").textContent=S.tilt_deg===null?"no sensor":Math.abs(S.tilt_deg).toFixed(0)+"°";
+  $("#activeList").innerHTML=S.live_alerts.length?S.live_alerts.map(alertHTML).join(""):'<p class="empty">No active safety issues.</p>';
+  const h=S.recent_alerts.filter(a=>a.category!=="Behaviour");
+  $("#alertList").innerHTML=h.length?h.slice(0,12).map(alertHTML).join(""):'<p class="empty">Nothing recorded yet this shift.</p>';
+}
+
+/* ---------- behaviour ---------- */
+function renderBeh(){
+  const w=S.window;
+  const mi=$("#mIdle");mi.className="panel metric"+(w.ratio>0.4?" flag":"");mi.querySelector("b").textContent=w.len?pct(w.ratio):"–";
+  const mf=$("#mFuel");mf.className="panel metric"+(w.len>=20&&w.cycles<=6&&w.fpc>1?" flag":"");mf.querySelector("b").textContent=w.len?w.fpc.toFixed(2)+" L":"–";
+  const ma=$("#mAnom");ma.className="panel metric"+(S.anomaly.flagged?" flag":"");ma.querySelector("b").textContent=S.anomaly.score===null?"–":S.anomaly.flagged?"Unusual":"Normal";
+  ma.querySelector("span").textContent="Anomaly model"+(S.anomaly.score===null?"":", score "+S.anomaly.score);
+  const pts=S.idle_series;let s='<line x1="0" y1="'+(170-0.4*160)+'" x2="600" y2="'+(170-0.4*160)+'" stroke="var(--amber)" stroke-dasharray="6 5" stroke-width="1.5"/><line x1="0" y1="170" x2="600" y2="170" stroke="var(--line)"/>';
+  if(pts.length>1){const dx=600/119;s+='<polyline points="'+pts.map((v,i)=>(i*dx).toFixed(1)+","+(170-v*160).toFixed(1)).join(" ")+'" fill="none" stroke="var(--ink)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';}
+  $("#idleChart").innerHTML=s;
+  $("#shiftTot").textContent="Dashed line: 40% flag threshold. This shift: "+S.shift_cycles+" load cycles, "+S.shift_fuel_l+" L fuel.";
+  const b=S.recent_alerts.filter(a=>a.category==="Behaviour");
+  $("#behList").innerHTML=b.length?b.slice(0,10).map(alertHTML).join(""):'<p class="empty">No unusual patterns so far this shift.</p>';
+}
+
+/* ---------- training ---------- */
+let trainSig="";
+function renderTraining(){
+  const sig=JSON.stringify(S.training)+booked;if(sig===trainSig)return;trainSig=sig;
+  const done=S.training.filter(t=>t.status==="done").map(t=>t.module),as=S.training.filter(t=>t.status==="assigned"&&MODULES[t.module]);
+  $("#assigned").innerHTML=as.length?as.map(x=>{const m=MODULES[x.module];return'<div class="mod"><div><h3>'+esc(m.title)+'</h3><div class="reason">Because at '+esc(x.clock)+': '+esc(x.reason)+'</div><div class="small muted">'+m.format+', '+m.mins+' min</div></div><button class="b primary" data-mod="'+x.module+'">Open</button></div>';}).join(""):'<p class="empty">Nothing recommended right now. Lessons appear here when something on shift suggests one would help.</p>';
+  $("#allMods").innerHTML=Object.entries(MODULES).map(([k,m])=>'<div class="mod"><div><h3>'+esc(m.title)+'</h3><div class="small muted">'+m.format+', '+m.mins+' min'+(done.includes(k)?", completed":"")+'</div></div><button class="b" data-mod="'+k+'">'+(done.includes(k)?"Review":"Open")+'</button></div>').join("");
+  const slots=["Thu 10:00, simulator bay","Thu 15:30, site office","Fri 09:00, simulator bay","Sat 11:00, training yard"];
+  $("#slots").innerHTML=slots.map((s,i)=>'<div class="slot"><span>'+s+'</span>'+(booked===i?'<span class="tag ok">Booked</span>':'<button class="b" data-slot="'+i+'" '+(booked!==null?"disabled":"")+'>Book</button>')+'</div>').join("");
+}
+document.addEventListener("click",e=>{
+  const m=e.target.closest("[data-mod]");if(m)openModule(m.dataset.mod);
+  const s=e.target.closest("[data-slot]");if(s){booked=+s.dataset.slot;trainSig="";renderTraining();toast("Instructor session booked.");}
+});
+function openModule(k){
+  const m=MODULES[k],q=m.quiz;
+  $("#modBody").innerHTML='<h2 style="font-size:22px">'+esc(m.title)+'</h2><p class="muted small">'+m.format+', '+m.mins+' min</p><ul>'+m.points.map(p=>"<li>"+esc(p)+"</li>").join("")+'</ul><div class="q"><b>'+esc(q.q)+'</b>'+q.o.map((o,i)=>'<label><input type="radio" name="q" value="'+i+'">'+esc(o)+'</label>').join("")+'</div><p id="quizMsg" class="small"></p><div class="row"><button class="b primary" id="quizBtn">Check answer</button><button class="b" id="closeDlg">Close</button></div>';
+  const dlg=$("#modDlg");dlg.showModal();$("#closeDlg").onclick=()=>dlg.close();
+  $("#quizBtn").onclick=async()=>{const c=dlg.querySelector('input[name="q"]:checked');
+    if(c&&+c.value===q.a){await act(()=>api("/training/"+k+"/complete","POST"));$("#quizMsg").innerHTML='<span class="chain-ok">Correct. Lesson completed, safety score +3.</span>';trainSig="";}
+    else $("#quizMsg").innerHTML='<span class="chain-bad">Not quite. Read the points again and try once more.</span>';};
+}
+
+/* ---------- incidents ---------- */
+async function loadIncidents(){
+  const list=await act(()=>api("/incidents"));if(!list)return;
+  $("#incList").innerHTML=list.length?list.map(r=>{const s=r.snapshot||{};return'<div class="inc"><div class="row" style="justify-content:space-between"><b>#'+r.seq+' '+esc(r.type)+'</b><span class="tag '+(r.severity==="critical"?"over":"")+'">'+esc(r.clock)+', '+esc(r.source)+'</span></div><div>'+esc(r.note)+'</div><div class="small muted">Snapshot: '+s.engine_min+' engine min, idle '+pct(s.idle_share)+', '+s.fuel_l+' L fuel, '+s.load_cycles+' cycles, '+s.unbelted_min+' min unbelted, nearest person '+(s.nearest_person_m??"n/a")+' m, tilt '+(s.tilt_deg??"n/a")+'</div><div class="hash">hash '+r.hash.slice(0,32)+'…</div></div>';}).join(""):'<p class="empty">No records yet. Critical alerts are saved here automatically, or add one with the form.</p>';
+}
+$("#incForm").addEventListener("submit",async e=>{e.preventDefault();const note=$("#incNote").value.trim();if(!note){toast("Add a short description first.");return;}
+  if(await act(()=>api("/incidents","POST",{type:$("#incType").value,severity:$("#incSev").value,note,source:"Operator"}),"Record saved.")){$("#incNote").value="";loadIncidents();}});
+$("#verifyBtn").addEventListener("click",async()=>{const r=await act(()=>api("/incidents/verify"));if(!r)return;
+  $("#chainTxt").innerHTML=!r.records?"No records to verify yet.":r.ok?'<span class="chain-ok">All '+r.records+' records intact. No edits since they were saved.</span>':'<span class="chain-bad">Record #'+r.broken_at+' was changed after it was saved. The chain is broken from this point.</span>';});
+$("#tamperBtn").addEventListener("click",async()=>{if(await act(()=>api("/incidents/1/tamper","POST"),"Record #1 edited directly in the database. Now verify the chain."))loadIncidents();});
+
+/* ---------- data ---------- */
+async function renderData(){
+  let h="<tr><th>Timestamp</th><th>Engine hrs</th><th>Fuel (L)</th><th>Cycles</th><th>Idle (min)</th><th>Seatbelt</th><th>Alert</th><th>Engine min</th><th>Idle share</th><th>Fuel per cycle</th><th>Flag</th></tr>";
+  HIST_TEL.forEach((r,i)=>{const em=i?(r[1]-HIST_TEL[i-1][1])*60:null,ir=em?r[4]/em:null,fpc=r[2]/Math.max(r[3],1),f=[];
+    if(r[5]==="Unfastened")f.push("Unbelted");if(ir!==null&&ir>0.4)f.push("Idle");if(fpc>1)f.push("Fuel/cycle");
+    h+="<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td>"+r[2]+"</td><td>"+r[3]+"</td><td>"+r[4]+"</td><td>"+r[5]+"</td><td>"+r[6]+"</td><td>"+(em?Math.round(em):"n/a")+"</td><td>"+(ir!==null?pct(ir):"n/a")+"</td><td>"+fpc.toFixed(2)+"</td><td class='"+(f.length?"flag":"")+"'>"+(f.join(", ")||"None")+"</td></tr>";});
+  $("#telTable").innerHTML=h;
+  if(!modelLoaded){const r=await act(()=>api("/model/info"));if(r){modelLoaded=true;
+    if(!r.loaded){$("#modelInfo").textContent="Models not trained yet. Run python ml/generate_data.py and python ml/train.py, then restart the backend.";}
+    else{const t=r.meta.task_model,a=r.meta.anomaly_model;
+      $("#modelInfo").innerHTML="<p><b>Task time</b> (quantile gradient boosting, "+t.test_rows+" test tasks): mean error "+t.mae_model_min+" min, versus "+t.mae_planned_min+" min for planned estimates. "+Math.round(t.interval_10_90_coverage*100)+"% of actual times fall inside the predicted range.</p><p><b>Usage anomalies</b> (Isolation Forest, "+a.windows+" 30-minute windows): "+Math.round(a.precision_vs_labelled_unsafe*100)+"% of flagged windows were genuinely unsafe or wasteful. Rules catch the clear-cut cases; the model catches unusual combinations.</p>";
+      $("#briefTable").innerHTML="<tr><th>Brief task</th><th>Planned</th><th>Actual</th><th>Model</th></tr>"+t.brief_rows.map(b=>"<tr><td>"+b.task_id+"</td><td>"+b.estimated+"</td><td>"+b.actual+"</td><td>"+b.model+"</td></tr>").join("");}}}
+  runEst();
+}
+async function runEst(){
+  const r=await act(()=>api("/predict","POST",{task_type:$("#eType").value,weather:$("#eWeather").value,operator_skill:$("#eSkill").value,machine_age:+$("#eAge").value||0,start_hour:+$("#eHour").value||10,estimated_min:+$("#ePlan").value||1}));
+  if(r)$("#eOut").innerHTML='<div class="big" style="font-size:44px">'+Math.round(r.mid)+' min</div><div class="range">Likely '+Math.round(r.low)+' to '+Math.round(r.high)+' min</div><ul class="why">'+r.factors.map(f=>'<li><span>'+esc(f.label)+'</span><b>'+sgn(f.delta_min)+' min</b></li>').join("")+'</ul>';
+}
+let estT;["#eType","#eWeather","#eSkill","#eAge","#ePlan","#eHour"].forEach(id=>$(id).addEventListener("input",()=>{clearTimeout(estT);estT=setTimeout(runEst,250);}));
+
+/* ---------- navigation + controls ---------- */
+function go(v){view=v;document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("on",s.id==="v-"+v));
+  document.querySelectorAll("nav.rail button").forEach(b=>{if(b.dataset.v===v)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
+  taskSig="";trainSig="";if(v==="incidents")loadIncidents();if(v==="data")renderData();if(S)onSnap();$("#main").scrollTop=0;}
+document.querySelectorAll("nav.rail button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.v)));
+$("#drawerBtn").addEventListener("click",()=>{const d=$("#drawer");d.classList.toggle("on");$("#drawerBtn").setAttribute("aria-expanded",d.classList.contains("on"));});
+$("#weather").addEventListener("change",e=>{const v=e.target.value;act(()=>api("/weather","POST",v==="auto"?{mode:"auto"}:{mode:"manual",weather:v}),r=>"Weather: "+r.weather);e.target.blur();});
+$("#banAck").addEventListener("click",()=>{$("#banner").classList.remove("on");api("/banner/ack","POST").catch(()=>{});});
+$("#dBreak").addEventListener("click",()=>act(()=>api("/break","POST"),"Break logged. Fatigue timer reset."));
+$("#dReset").addEventListener("click",()=>{if(confirm("Start a new shift? This clears today's telemetry, alerts, lessons and incident records."))act(()=>api("/admin/reset","POST"),"New shift started.").then(()=>{lastAlertId=null;incCount=-1;});});
+$("#dTheme").addEventListener("click",()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;r.dataset.theme=dark?"light":"dark";});
+
+/* ---------- voice / text commands ---------- */
+async function handle(txt){
+  const t=txt.toLowerCase().trim();if(!t||!S)return;
+  const active=S.tasks.find(x=>x.status==="active"),todo=S.tasks.find(x=>x.status==="todo");
+  if(/incident|report|log/.test(t)){const note=txt.replace(/^(log|report)( an)? incident[:,]?\s*/i,"")||"Reported by voice";
+    if(await act(()=>api("/incidents","POST",{type:"Operator report",severity:"warning",note,source:"Voice"})))reply("Incident logged with the last 10 minutes of machine data.");}
+  else if(/next|what.*task|schedule/.test(t)){const n=active||todo;reply(!n?"All tasks are done for today.":active?"Current task: "+n.task_type+", "+n.elapsed_min+" minutes so far.":"Next task: "+n.task_type+" at "+n.zone+". Predicted "+Math.round(n.prediction.mid)+" minutes.");}
+  else if(/start/.test(t)){if(!todo||active){reply(active?"Finish the current task first.":"All tasks are done.");return;}const r=await act(()=>api("/tasks/"+todo.id+"/start","POST"));if(r)reply("Started "+todo.task_type+". Predicted "+Math.round(r.prediction.mid)+" minutes.");}
+  else if(/complete|done|finish/.test(t)){if(!active){reply("No task in progress.");return;}const r=await act(()=>api("/tasks/"+active.id+"/complete","POST"));if(r)reply(active.task_type+" completed in "+r.actual_min+" minutes.");}
+  else if(/score/.test(t))reply("Safety score "+S.operator.safety+", efficiency "+S.efficiency+".");
+  else if(/break/.test(t)){await act(()=>api("/break","POST"));reply("Break logged.");}
+  else if(/belt|seat/.test(t))reply(S.machine.belt?"Seatbelt is fastened.":"Seatbelt is unfastened. Please fasten it.");
+  else if(/weather|rain|wind/.test(t))reply("Weather is "+S.weather.value+". Stop zone is "+S.zones.red+" metres.");
+  else reply("Try: next task, start task, complete task, log incident, my score, or take a break.");
+}
+$("#cmd").addEventListener("keydown",e=>{if(e.key==="Enter"){handle(e.target.value);e.target.value="";}});
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+$("#micBtn").addEventListener("click",()=>{
+  if(!SR){reply("Voice input isn't supported in this browser. Type the command instead.");$("#cmd").focus();return;}
+  try{const rec=new SR();rec.lang="en-IN";rec.interimResults=false;
+    rec.onstart=()=>$("#micBtn").classList.add("listening");rec.onend=()=>$("#micBtn").classList.remove("listening");
+    rec.onerror=()=>{$("#micBtn").classList.remove("listening");reply("Microphone isn't available. Type the command instead.");};
+    rec.onresult=ev=>{const txt=ev.results[0][0].transcript;$("#cmd").value=txt;handle(txt);setTimeout(()=>$("#cmd").value="",1500);};
+    rec.start();}catch(e){reply("Microphone isn't available. Type the command instead.");}
+});
+
+renderWalk();connect();
+})();
+</script>
+</body>
+</html>

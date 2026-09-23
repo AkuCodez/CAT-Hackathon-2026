@@ -1,0 +1,70 @@
+{
+  "task_model": {
+    "features": [
+      "machine_age",
+      "start_hour",
+      "estimated_min",
+      "task_type=Earth Excavation",
+      "task_type=Trenching",
+      "task_type=Material Loading",
+      "task_type=Grading",
+      "task_type=Demolition",
+      "weather=Sunny",
+      "weather=Cloudy",
+      "weather=Rainy",
+      "weather=Windy",
+      "operator_skill=Expert",
+      "operator_skill=Intermediate",
+      "operator_skill=Beginner"
+    ],
+    "test_rows": 401,
+    "mae_planned_min": 10.67,
+    "mae_model_min": 3.36,
+    "interval_10_90_coverage": 0.658,
+    "brief_rows": [
+      {
+        "task_id": "T001",
+        "estimated": 60,
+        "actual": 58,
+        "model": 57.6
+      },
+      {
+        "task_id": "T002",
+        "estimated": 45,
+        "actual": 52,
+        "model": 52.8
+      },
+      {
+        "task_id": "T003",
+        "estimated": 30,
+        "actual": 42,
+        "model": 40.8
+      },
+      {
+        "task_id": "T004",
+        "estimated": 35,
+        "actual": 33,
+        "model": 33.3
+      },
+      {
+        "task_id": "T005",
+        "estimated": 90,
+        "actual": 105,
+        "model": 104.5
+      }
+    ]
+  },
+  "anomaly_model": {
+    "features": [
+      "idle_share",
+      "fuel_per_cycle",
+      "unbelted_min",
+      "cycles",
+      "harsh_count"
+    ],
+    "windows": 417,
+    "flag_rate": 0.082,
+    "precision_vs_labelled_unsafe": 0.882,
+    "recall_vs_labelled_unsafe": 0.326
+  }
+}

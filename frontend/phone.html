@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cab sensor</title>
+<style>
+:root{--bg:#14171A;--ink:#EDF0F2;--muted:#98A2AC;--hv:#F2B705;--red:#FF5C61;--green:#3DCB80;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:20px}
+h1{font-size:26px;margin:0 0 6px}
+p{color:var(--muted)}
+button{width:100%;min-height:56px;border:0;border-radius:12px;font-size:18px;font-weight:700;margin:8px 0;background:#2A2F34;color:var(--ink)}
+button.go{background:var(--hv);color:#1A1400}
+.big{font-size:64px;font-weight:800;line-height:1}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #343A40}
+.ok{color:var(--green)}.bad{color:var(--red)}
+label{display:block;margin-top:14px;color:var(--muted)}
+input[type=range]{width:100%}
+</style>
+</head>
+<body>
+<h1>Cab motion sensor</h1>
+<p>Mount this phone flat in the cab. It sends tilt and sudden jerks to Cab Companion.</p>
+<button class="go" id="start">Start sensors</button>
+<button id="cal">Set current position as level</button>
+<div class="row"><span>Tilt</span><b id="tilt">–</b></div>
+<div class="row"><span>Motion</span><b id="acc">–</b></div>
+<div class="row"><span>Harsh events sent</span><b id="harsh">0</b></div>
+<div class="row"><span>Connection</span><b id="conn">Not started</b></div>
+<label for="th">Harsh threshold: <b id="thv">6</b> m/s²</label>
+<input id="th" type="range" min="3" max="15" step="0.5" value="6">
+<script>
+let b0=0,g0=0,beta=0,gamma=0,tilt=0,lastHarsh=0,harshN=0,started=false;
+const $=id=>document.getElementById(id);
+async function post(body){
+  try{const r=await fetch("/imu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    $("conn").textContent=r.ok?"Sending":"Error "+r.status;$("conn").className=r.ok?"ok":"bad";}
+  catch(e){$("conn").textContent="Backend not reachable";$("conn").className="bad";}
+}
+function onOrient(e){beta=e.beta||0;gamma=e.gamma||0;tilt=Math.max(Math.abs(beta-b0),Math.abs(gamma-g0));
+  $("tilt").textContent=tilt.toFixed(1)+"°";$("tilt").className=tilt>=15?"bad":"";}
+function onMotion(e){
+  let mag;
+  if(e.acceleration&&e.acceleration.x!==null){const a=e.acceleration;mag=Math.hypot(a.x,a.y,a.z);}
+  else{const a=e.accelerationIncludingGravity||{x:0,y:0,z:0};mag=Math.abs(Math.hypot(a.x,a.y,a.z)-9.81);}
+  $("acc").textContent=mag.toFixed(1)+" m/s²";
+  const th=+$("th").value,now=Date.now();
+  if(mag>th&&now-lastHarsh>800){lastHarsh=now;harshN++;$("harsh").textContent=harshN;
+    post({harsh:true,magnitude:+mag.toFixed(2),tilt_deg:+tilt.toFixed(1)});}
+}
+$("th").oninput=e=>$("thv").textContent=e.target.value;
+$("cal").onclick=()=>{b0=beta;g0=gamma;};
+$("start").onclick=async()=>{
+  if(started)return;
+  try{
+    if(typeof DeviceMotionEvent!=="undefined"&&DeviceMotionEvent.requestPermission){
+      const r=await DeviceMotionEvent.requestPermission();if(r!=="granted")throw new Error("denied");}
+    if(typeof DeviceOrientationEvent!=="undefined"&&DeviceOrientationEvent.requestPermission){
+      await DeviceOrientationEvent.requestPermission();}
+  }catch(e){$("conn").textContent="Sensor permission denied";$("conn").className="bad";return;}
+  if(!window.isSecureContext){$("conn").textContent="Needs HTTPS (use ngrok)";$("conn").className="bad";}
+  window.addEventListener("deviceorientation",onOrient);
+  window.addEventListener("devicemotion",onMotion);
+  started=true;$("start").textContent="Sensors running";
+  setInterval(()=>post({tilt_deg:+tilt.toFixed(1)}),1000);
+};
+</script>
+</body>
+</html>
