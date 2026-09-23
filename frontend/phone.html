@@ -12,6 +12,8 @@ h1{font-size:26px;margin:0 0 6px}
 p{color:var(--muted)}
 button{width:100%;min-height:56px;border:0;border-radius:12px;font-size:18px;font-weight:700;margin:8px 0;background:#2A2F34;color:var(--ink)}
 button.go{background:var(--hv);color:#1A1400}
+button.stop{background:var(--red);color:#fff}
+button:disabled{opacity:.4}
 .big{font-size:64px;font-weight:800;line-height:1}
 .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #343A40}
 .ok{color:var(--green)}.bad{color:var(--red)}
@@ -21,24 +23,29 @@ input[type=range]{width:100%}
 </head>
 <body>
 <h1>Cab motion sensor</h1>
-<p>Mount this phone flat in the cab. It sends tilt and sudden jerks to Cab Companion.</p>
+<p>Mount this phone in the cab. Its position when you tap Start counts as level. It sends tilt, sudden jerks and impacts to Cab Companion.</p>
 <button class="go" id="start">Start sensors</button>
+<button id="lock">Lock sensors on</button>
 <button id="cal">Set current position as level</button>
 <div class="row"><span>Tilt</span><b id="tilt">–</b></div>
 <div class="row"><span>Motion</span><b id="acc">–</b></div>
 <div class="row"><span>Harsh events sent</span><b id="harsh">0</b></div>
+<div class="row"><span>Impacts logged</span><b id="impact">0</b></div>
 <div class="row"><span>Connection</span><b id="conn">Not started</b></div>
-<label for="th">Harsh threshold: <b id="thv">6</b> m/s²</label>
-<input id="th" type="range" min="3" max="15" step="0.5" value="6">
+<label for="th">Harsh threshold: <b id="thv">8</b> m/s²</label>
+<input id="th" type="range" min="3" max="15" step="0.5" value="8">
 <script>
-let b0=0,g0=0,beta=0,gamma=0,tilt=0,lastHarsh=0,harshN=0,started=false;
+let b0=0,g0=0,beta=0,gamma=0,tilt=0,lastHarsh=0,harshN=0,started=false,locked=false,timer=0,levelNext=false,lastImpact=0,impactN=0;
+const IMPACT=25; // measured: hard shakes 29-32 m/s², normal handling under 6
 const $=id=>document.getElementById(id);
-async function post(body){
-  try{const r=await fetch("/imu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+async function post(body,path="/imu"){
+  try{const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     $("conn").textContent=r.ok?"Sending":"Error "+r.status;$("conn").className=r.ok?"ok":"bad";}
   catch(e){$("conn").textContent="Backend not reachable";$("conn").className="bad";}
 }
-function onOrient(e){beta=e.beta||0;gamma=e.gamma||0;tilt=Math.max(Math.abs(beta-b0),Math.abs(gamma-g0));
+function onOrient(e){beta=e.beta||0;gamma=e.gamma||0;
+  if(levelNext){b0=beta;g0=gamma;levelNext=false;}
+  tilt=Math.max(Math.abs(beta-b0),Math.abs(gamma-g0));
   $("tilt").textContent=tilt.toFixed(1)+"°";$("tilt").className=tilt>=15?"bad":"";}
 function onMotion(e){
   let mag;
@@ -48,11 +55,29 @@ function onMotion(e){
   const th=+$("th").value,now=Date.now();
   if(mag>th&&now-lastHarsh>800){lastHarsh=now;harshN++;$("harsh").textContent=harshN;
     post({harsh:true,magnitude:+mag.toFixed(2),tilt_deg:+tilt.toFixed(1)});}
+  if(mag>IMPACT&&now-lastImpact>10000){lastImpact=now;impactN++;$("impact").textContent=impactN;
+    post({type:"Impact",severity:"critical",source:"Phone IMU",
+      note:`Impact ${mag.toFixed(1)} m/s², tilt ${tilt.toFixed(1)}°`},"/incidents");}
+}
+function render(){
+  $("start").textContent=started?"Stop sensors":"Start sensors";
+  $("start").className=started?"stop":"go";
+  $("start").disabled=locked&&started;
+  $("lock").textContent=locked?"Locked (tap to unlock)":"Lock sensors on";
+  $("th").disabled=$("cal").disabled=locked;
+}
+function stop(){
+  window.removeEventListener("deviceorientation",onOrient);
+  window.removeEventListener("devicemotion",onMotion);
+  clearInterval(timer);started=false;
+  $("conn").textContent="Stopped";$("conn").className="bad";
 }
 $("th").oninput=e=>$("thv").textContent=e.target.value;
 $("cal").onclick=()=>{b0=beta;g0=gamma;};
+// TODO: lock can't stop screen lock, reload or tab close from killing sensors; backend should alert when /imu goes silent
+$("lock").onclick=()=>{locked=!locked;render();};
 $("start").onclick=async()=>{
-  if(started)return;
+  if(started){if(!locked)stop();render();return;}
   try{
     if(typeof DeviceMotionEvent!=="undefined"&&DeviceMotionEvent.requestPermission){
       const r=await DeviceMotionEvent.requestPermission();if(r!=="granted")throw new Error("denied");}
@@ -60,11 +85,14 @@ $("start").onclick=async()=>{
       await DeviceOrientationEvent.requestPermission();}
   }catch(e){$("conn").textContent="Sensor permission denied";$("conn").className="bad";return;}
   if(!window.isSecureContext){$("conn").textContent="Needs HTTPS (use ngrok)";$("conn").className="bad";}
+  levelNext=true;
   window.addEventListener("deviceorientation",onOrient);
   window.addEventListener("devicemotion",onMotion);
-  started=true;$("start").textContent="Sensors running";
-  setInterval(()=>post({tilt_deg:+tilt.toFixed(1)}),1000);
+  started=true;
+  timer=setInterval(()=>post({tilt_deg:+tilt.toFixed(1)}),1000);
+  render();
 };
+render();
 </script>
 </body>
 </html>
