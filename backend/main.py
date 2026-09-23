@@ -7,7 +7,7 @@ import os
 import time
 import urllib.request
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +37,7 @@ class Live:
         self.persons, self.cam_t = [], 0.0
         self.tilt, self.phone_t = None, 0.0
         self.harsh = collections.deque(maxlen=500)
+        self.harsh_pending = 0
         self.since_break = 0
         self.weather, self.weather_mode, self.weather_detail, self.weather_t = "Sunny", "auto", "Not fetched yet", 0.0
         self.banner = None
@@ -292,8 +293,9 @@ def post_telemetry(t: Telemetry):
     else:
         L.clock += 1
     row = t.model_dump()
+    harsh_in_row, L.harsh_pending = L.harsh_pending, 0
     L.hist.append({"engine_on": int(t.engine_on), "idle": int(t.idle), "fuel_l": t.fuel_l,
-                   "load_cycle": t.load_cycle, "belt_fastened": int(t.belt_fastened), "harsh_event": 0})
+                   "load_cycle": t.load_cycle, "belt_fastened": int(t.belt_fastened), "harsh_event": harsh_in_row})
     L.engine_on, L.idle, L.belt, L.last_tel = t.engine_on, t.idle and t.engine_on, t.belt_fastened, time.time()
     if t.engine_on:
         L.since_break += 1
@@ -302,7 +304,6 @@ def post_telemetry(t: Telemetry):
                                            int(t.idle), t.fuel_l, t.load_cycle, int(t.belt_fastened)))
     if len(L.hist) >= 20:
         feats = window_features(list(L.hist)[-30:])
-        feats["harsh_count"] = harsh_count()
         L.anomaly = M.anomaly(feats)
     return {"ok": True, "clock": fmt(L.clock)}
 
@@ -325,6 +326,7 @@ def post_imu(i: Imu):
         L.tilt = i.tilt_deg
     if i.harsh:
         L.harsh.append(time.time())
+        L.harsh_pending += 1
         db.execute("INSERT INTO imu_event(ts, type, magnitude, tilt_deg) VALUES(?,?,?,?)",
                    (now_iso(), "harsh", i.magnitude, i.tilt_deg))
     return {"ok": True}
@@ -413,12 +415,9 @@ def complete_training(module: str):
 
 
 class PredictIn(BaseModel):
-    task_type: str
-    weather: str
-    operator_skill: str
-    machine_age: int
-    start_hour: int = 10
-    estimated_min: float
+    task_type: Literal["Earth Excavation", "Trenching", "Material Loading", "Grading", "Demolition"]
+    weather: Literal["Sunny", "Cloudy", "Rainy", "Windy"]
+    operator_skill: Literal["Expert", "Intermediate", "Beginner"]
 
 
 @app.post("/predict")

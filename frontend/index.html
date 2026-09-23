@@ -542,7 +542,7 @@ async function renderData(){
   if(!modelLoaded){const r=await act(()=>api("/model/info"));if(r){modelLoaded=true;
     if(!r.loaded){$("#modelInfo").textContent="Models not trained yet. Run python ml/generate_data.py and python ml/train.py, then restart the backend.";}
     else{const t=r.meta.task_model,a=r.meta.anomaly_model;
-      $("#modelInfo").innerHTML="<p><b>Task time</b> (quantile gradient boosting, "+t.test_rows+" test tasks): mean error "+t.mae_model_min+" min, versus "+t.mae_planned_min+" min for planned estimates. "+Math.round(t.interval_10_90_coverage*100)+"% of actual times fall inside the predicted range.</p><p><b>Usage anomalies</b> (Isolation Forest, "+a.windows+" 30-minute windows): "+Math.round(a.precision_vs_labelled_unsafe*100)+"% of flagged windows were genuinely unsafe or wasteful. Rules catch the clear-cut cases; the model catches unusual combinations.</p>";
+      $("#modelInfo").innerHTML="<p><b>Task time</b> (quantile gradient boosting, "+t.test_rows+" test tasks): mean error "+t.mae_model_min+" min, versus "+t.mae_planned_min+" min for planned estimates. "+Math.round((t.interval_coverage??t.interval_10_90_coverage)*100)+"% of actual times fall inside the predicted 5–95% range.</p><p><b>Usage anomalies</b> (Isolation Forest, "+a.windows+" 30-minute windows): "+Math.round(a.precision_vs_labelled_unsafe*100)+"% of flagged windows were genuinely unsafe or wasteful. Rules catch the clear-cut cases; the model catches unusual combinations.</p>";
       $("#briefTable").innerHTML="<tr><th>Brief task</th><th>Planned</th><th>Actual</th><th>Model</th></tr>"+t.brief_rows.map(b=>"<tr><td>"+b.task_id+"</td><td>"+b.estimated+"</td><td>"+b.actual+"</td><td>"+b.model+"</td></tr>").join("");}}}
   runEst();
 }

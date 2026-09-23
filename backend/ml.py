@@ -7,6 +7,7 @@ import pandas as pd
 from .features import WINDOW_FEATURES, featurize_tasks
 
 MODELS = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ml", "models"))
+QUANTILES = (5, 50, 95)
 FALLBACK = {"skill": {"Expert": 0.95, "Intermediate": 1.05, "Beginner": 1.30},
             "weather": {"Sunny": 1.00, "Cloudy": 1.05, "Rainy": 1.10, "Windy": 1.08}}
 BASELINE = {"weather": "Sunny", "operator_skill": "Expert", "machine_age": 3, "start_hour": 10}
@@ -19,7 +20,7 @@ class ML:
         self.meta, self.q, self.iso = {}, {}, None
         try:
             import joblib
-            for q in (10, 50, 90):
+            for q in QUANTILES:
                 self.q[q] = joblib.load(os.path.join(MODELS, f"task_q{q}.joblib"))
             self.iso = joblib.load(os.path.join(MODELS, "usage_iforest.joblib"))
             with open(os.path.join(MODELS, "meta.json")) as f:
@@ -39,7 +40,7 @@ class ML:
                 out.append((f * 0.92, f, f * 1.08))
             return out
         X = featurize_tasks(df).reindex(columns=self.meta["task_model"]["features"], fill_value=0)
-        lo, mid, hi = (self.q[q].predict(X) for q in (10, 50, 90))
+        lo, mid, hi = (self.q[q].predict(X) for q in QUANTILES)
         return [tuple(sorted((a, b, c))) for a, b, c in zip(lo, mid, hi)]
 
     def predict_task(self, task_type, weather, operator_skill, machine_age, start_hour, estimated_min, bias=1.0):
