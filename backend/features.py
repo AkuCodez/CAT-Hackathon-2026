@@ -7,6 +7,7 @@ CATS = {
 }
 NUMERIC = ["machine_age", "start_hour", "estimated_min"]
 WINDOW_FEATURES = ["idle_share", "fuel_per_cycle", "unbelted_min", "cycles", "harsh_count"]
+ANOMALY_WINDOW_ROWS = 30
 
 
 def featurize_tasks(df: pd.DataFrame) -> pd.DataFrame:
@@ -18,6 +19,12 @@ def featurize_tasks(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def window_features(rows) -> dict:
+    """Aggregate consecutive telemetry samples for anomaly inference.
+
+    The project contract is one telemetry row per simulated/operational minute,
+    so ``harsh_count`` means events observed in the same 30-row window as all
+    other features. The feature names and order are shared with serving.
+    """
     eng = sum(int(r["engine_on"]) for r in rows)
     idle = sum(int(r["engine_on"]) and int(r["idle"]) for r in rows)
     fuel = sum(float(r["fuel_l"]) for r in rows)
