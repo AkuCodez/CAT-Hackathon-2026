@@ -42,10 +42,11 @@ Optional sensors:
 
 ```bash
 pip install -r requirements-vision.txt
-python sensors/vision.py --facing rear     # stand 2 m away and press c to calibrate
+python sensors/vision.py --facing rear     # proximity; K is calibrated for our webcam, press c at 2 m to recalibrate
+python sensors/vision.py --mode operator   # logs a Distraction incident when a phone is in view for 2 s with the engine on
 ```
 
-For the phone, run `ngrok http 8000` and open `https://<your-ngrok-url>/app/phone.html` on the phone. Phone motion sensors only work over HTTPS, and iPhones ask for permission when you tap **Start sensors**.
+For the phone, keep it and the laptop on the same network (a phone hotspot works), then run `python sensors/tls_proxy.py` and open the URL it prints on the phone. Phone motion sensors only work over HTTPS, so Safari shows a certificate warning once: tap **Show Details**, then **visit this website**. No internet or tunnel is needed. iPhones ask for motion permission when you tap **Start sensors**. The phone logs an Impact incident above 25 m/s², and **Lock sensors on** stops the sensors from being switched off.
 
 Live weather uses Open-Meteo (no key needed). It defaults to Vellore; set your site with `SITE_LAT` and `SITE_LON` environment variables. If the internet is down, choose the weather manually in the header.
 
