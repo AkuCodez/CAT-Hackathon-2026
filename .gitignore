@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+cab.db
+yolov8n.pt
+ml/data/task_history_export.csv
+ml/models/*.joblib
+ml/models/meta.json
