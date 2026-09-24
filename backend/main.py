@@ -418,6 +418,9 @@ class PredictIn(BaseModel):
     task_type: Literal["Earth Excavation", "Trenching", "Material Loading", "Grading", "Demolition"]
     weather: Literal["Sunny", "Cloudy", "Rainy", "Windy"]
     operator_skill: Literal["Expert", "Intermediate", "Beginner"]
+    machine_age: int = 3
+    start_hour: int = 8
+    estimated_min: float = 60.0
 
 
 @app.post("/predict")

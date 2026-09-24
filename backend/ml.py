@@ -21,7 +21,7 @@ class ML:
         try:
             import joblib
             for q in QUANTILES:
-                self.q[q] = joblib.load(os.path.join(MODELS, f"task_q{q}.joblib"))
+                self.q[q] = joblib.load(os.path.join(MODELS, f"task_q{q:02d}.joblib"))
             self.iso = joblib.load(os.path.join(MODELS, "usage_iforest.joblib"))
             with open(os.path.join(MODELS, "meta.json")) as f:
                 self.meta = json.load(f)
