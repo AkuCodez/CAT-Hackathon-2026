@@ -7,6 +7,7 @@ Replace this script with a real telematics feed later; the backend API stays the
   python sensors/replay.py --events "30:idle,45:unbelt,70:belt,75:work"
 
 Terminal commands while running: work, idle, unbelt, belt, off, on, fast, slow, quit
+The same commands (except quit) can be typed into the dashboard's command box.
 """
 import argparse
 import csv
@@ -67,6 +68,14 @@ def keyboard():
               f"belt {'on' if state['belt'] else 'OFF'}")
 
 
+def dashboard_commands():
+    """Commands typed into the web dashboard, queued by the backend at /sim/command."""
+    try:
+        return requests.get(f"{args.api}/sim/commands", timeout=2).json().get("commands", [])
+    except (requests.RequestException, ValueError):
+        return []
+
+
 def sim_row():
     if not state["engine_on"]:
         fuel, cycle = 0.0, 0
@@ -96,6 +105,9 @@ def main():
         for cmd in events.get(minute, []):
             apply(cmd)
             print(f"[event @ minute {minute}] {cmd}")
+        for cmd in dashboard_commands():
+            apply(cmd)
+            print(f"[dashboard @ minute {minute}] {cmd}")
         row = next(source, None) if source else sim_row()
         if row is None:
             print("CSV finished.")

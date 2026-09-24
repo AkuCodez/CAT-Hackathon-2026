@@ -565,10 +565,27 @@ $("#dReset").addEventListener("click",()=>{if(confirm("Start a new shift? This c
 $("#dTheme").addEventListener("click",()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches;r.dataset.theme=dark?"light":"dark";});
 
 /* ---------- voice / text commands ---------- */
+const SIM_SAID={work:"Machine working.",idle:"Machine idling.",unbelt:"Seatbelt unfastened.",belt:"Seatbelt fastened.",
+  off:"Engine off.",on:"Engine on.",fast:"Simulation clock sped up.",slow:"Simulation clock back to normal."};
+function simCmd(t){
+  if(/^(is|am|are|check|what)\b|\?$|incident|report|log/.test(t))return null;
+  if(/^(fast|slow|work|idle|on|off|belt|unbelt)$/.test(t))return t;
+  if(/unfasten|unbelt|remove.*belt|belt off/.test(t))return "unbelt";
+  if(/fasten|belt on|buckle/.test(t))return "belt";
+  if(/(engine|machine) off|\bturn.*\boff\b|shut.*(down|off)|stop (the )?(engine|machine)/.test(t))return "off";
+  if(/(engine|machine) on|\bturn.*\bon\b|start (the )?(engine|machine)/.test(t))return "on";
+  if(/go idle|start idling|idling/.test(t))return "idle";
+  if(/resume work|start working|back to work/.test(t))return "work";
+  return null;
+}
 async function handle(txt){
   const t=txt.toLowerCase().trim();if(!t||!S)return;
   const active=S.tasks.find(x=>x.status==="active"),todo=S.tasks.find(x=>x.status==="todo");
-  if(/incident|report|log/.test(t)){const note=txt.replace(/^(log|report)( an)? incident[:,]?\s*/i,"")||"Reported by voice";
+  const sc=simCmd(t);
+  if(sc){const r=await act(()=>api("/sim/command","POST",{cmd:sc}));
+    if(r)reply(r.source_live?SIM_SAID[sc]+" Updates on the next telemetry tick."
+      :"Command queued, but no telemetry is arriving. Start python sensors/replay.py to apply it.");}
+  else if(/incident|report|log/.test(t)){const note=txt.replace(/^(log|report)( an)? incident[:,]?\s*/i,"")||"Reported by voice";
     if(await act(()=>api("/incidents","POST",{type:"Operator report",severity:"warning",note,source:"Voice"})))reply("Incident logged with the last 10 minutes of machine data.");}
   else if(/next|what.*task|schedule/.test(t)){const n=active||todo;reply(!n?"All tasks are done for today.":active?"Current task: "+n.task_type+", "+n.elapsed_min+" minutes so far.":"Next task: "+n.task_type+" at "+n.zone+". Predicted "+Math.round(n.prediction.mid)+" minutes.");}
   else if(/start/.test(t)){if(!todo||active){reply(active?"Finish the current task first.":"All tasks are done.");return;}const r=await act(()=>api("/tasks/"+todo.id+"/start","POST"));if(r)reply("Started "+todo.task_type+". Predicted "+Math.round(r.prediction.mid)+" minutes.");}
@@ -577,7 +594,7 @@ async function handle(txt){
   else if(/break/.test(t)){await act(()=>api("/break","POST"));reply("Break logged.");}
   else if(/belt|seat/.test(t))reply(S.machine.belt?"Seatbelt is fastened.":"Seatbelt is unfastened. Please fasten it.");
   else if(/weather|rain|wind/.test(t))reply("Weather is "+S.weather.value+". Stop zone is "+S.zones.red+" metres.");
-  else reply("Try: next task, start task, complete task, log incident, my score, or take a break.");
+  else reply("Try: next task, start task, complete task, log incident, my score, take a break, or machine controls: belt, unbelt, idle, work, off, on.");
 }
 $("#cmd").addEventListener("keydown",e=>{if(e.key==="Enter"){handle(e.target.value);e.target.value="";}});
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;

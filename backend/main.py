@@ -43,6 +43,7 @@ class Live:
         self.banner = None
         self.anomaly = {"score": None, "flagged": False}
         self.live_alerts = []
+        self.sim_cmds = collections.deque(maxlen=20)
 
 
 L, R, M = Live(), Rules(), ML()
@@ -363,6 +364,24 @@ async def set_weather(w: WeatherIn):
 def take_break():
     L.since_break = 0
     return {"ok": True}
+
+
+class SimCmd(BaseModel):
+    cmd: Literal["work", "idle", "unbelt", "belt", "off", "on", "fast", "slow"]
+
+
+@app.post("/sim/command")
+def queue_sim_command(c: SimCmd):
+    """Machine controls from the dashboard. sensors/replay.py picks these up on its next tick."""
+    L.sim_cmds.append(c.cmd)
+    return {"queued": c.cmd, "source_live": time.time() - L.last_tel <= 5}
+
+
+@app.get("/sim/commands")
+def take_sim_commands():
+    cmds = list(L.sim_cmds)
+    L.sim_cmds.clear()
+    return {"commands": cmds}
 
 
 @app.post("/banner/ack")
